@@ -3,6 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { auth } from './src/services/firebase';
 import RegisterScreen from './src/screens/RegisterScreen';
 import { FirebaseError } from 'firebase/app';
+import MoodPreferencesScreen from './src/screens/MoodPreferencesScreen';
+import RecommendationsScreen from './src/screens/RecommendationsScreen';
+import type { MoodPreferences } from './src/screens/MoodPreferencesScreen';
+import ActivitySessionScreen from './src/screens/ActivitySessionScreen';
+import type { Activity } from './src/services/recommendations';
 
 import {
   onAuthStateChanged,
@@ -34,6 +39,14 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
+  // Controls whether the mood selection screen is visible.
+  const [showMoodPreferences, setShowMoodPreferences] = useState(false);
+  // Keep the submitted choices while recommendations are visible.
+  const [selectedPreferences, setSelectedPreferences] =
+    useState<MoodPreferences | null>(null);
+  // Store the activity selected for the timer.
+  const [activeActivity, setActiveActivity] = useState<Activity | null>(null);
+
   const [user, setUser] = useState<User | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -61,6 +74,8 @@ async function handleLogout() {
     setPassword('');
     setShowPassword(false);
     setShowRegister(false);
+    // Return to Home rather than an old screen on the next login.
+    setShowMoodPreferences(false);
 
     console.info('[Auth] Logout successful');
   } catch (error) {
@@ -169,11 +184,52 @@ if (showRegister) {
 }
 
 if (user) {
+      // Show the timer for the selected activity.
+    if (activeActivity) {
+      return (
+        <ActivitySessionScreen
+          key={activeActivity.id}
+          activity={activeActivity}
+          onBack={() => setActiveActivity(null)}
+          onComplete={() => {
+            // Return home when the activity is complete.
+            setActiveActivity(null);
+            setSelectedPreferences(null);
+            setShowMoodPreferences(false);
+          }}
+        />
+      );
+    }
+
+    // Show recommendations based on the user's preferences.
+    if (selectedPreferences) {
+      return (
+        <RecommendationsScreen
+          preferences={selectedPreferences}
+          onBack={() => setSelectedPreferences(null)}
+          onStartActivity={(activity) => setActiveActivity(activity)}
+        />
+      );
+    }
+
+  // Collect the user's choices before showing recommendations.
+  if (showMoodPreferences) {
+   return (
+    <MoodPreferencesScreen
+      onBack={() => setShowMoodPreferences(false)}
+      onContinue={(preferences) => {
+        setSelectedPreferences(preferences);
+       }}
+      />
+    );
+  }
+
   return (
     <HomeScreen
       email={user.email}
       onLogout={handleLogout}
       loggingOut={loggingOut}
+      onCheckIn={() => setShowMoodPreferences(true)}
     />
   );
 }
