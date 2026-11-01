@@ -19,6 +19,7 @@ export type MoodPreferences = {
 type Props = {
   onBack: () => void;
   onContinue: (preferences: MoodPreferences) => void;
+  continueLabel?: string; // Allow the parent to customise the button wording.
 };
 
 // Reuse the same button design for each choice.
@@ -68,6 +69,7 @@ function Choice({ label, emoji, selected, onPress }: ChoiceProps) {
 export default function MoodPreferencesScreen({
   onBack,
   onContinue,
+  continueLabel = 'Find my activities →',
 }: Props) {
   // Store the user's selected options.
   const [mood, setMood] = useState<MoodPreferences['mood']>('Calm');
@@ -146,7 +148,7 @@ export default function MoodPreferencesScreen({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How much time do you have?</Text>
           <View style={styles.options}>
-            {[5, 15, 30, 60].map((item) => (
+            {[5, 15, 30, 60, 120].map((item) => (
               <Choice
                 key={item}
                 label={`${item} min`}
@@ -180,7 +182,8 @@ export default function MoodPreferencesScreen({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.buttonText}>Find my activities →</Text>
+          <Text style={styles.buttonText}><Text style={styles.buttonText}>{continueLabel}</Text>
+           →</Text>
         </Pressable>
 
         <Text style={styles.footer}>

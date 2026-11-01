@@ -9,6 +9,8 @@ import type { MoodPreferences } from './src/screens/MoodPreferencesScreen';
 import ActivitySessionScreen from './src/screens/ActivitySessionScreen';
 import type { Activity } from './src/services/recommendations';
 import ActivityHistoryScreen from './src/screens/ActivityHistoryScreen'; // Import the history screen.
+import MyActivitiesScreen from './src/screens/MyActivitiesScreen';
+import type { PersonalActivity } from './src/services/personalActivities';
 
 import {
   onAuthStateChanged,
@@ -43,6 +45,12 @@ export default function App() {
   // Controls whether the mood selection screen is visible.
   const [showMoodPreferences, setShowMoodPreferences] = useState(false);
   const [showHistory, setShowHistory] = useState(false); // Control whether history is visible.
+
+  const [showMyActivities, setShowMyActivities] = useState(false); // Control the personal activity screen.
+  // Remember the personal activity while the user selects session preferences.
+  const [personalActivity, setPersonalActivity] =
+    useState<PersonalActivity | null>(null);
+
   // Keep the submitted choices while recommendations are visible.
   const [selectedPreferences, setSelectedPreferences] =
     useState<MoodPreferences | null>(null);
@@ -77,7 +85,12 @@ async function handleLogout() {
     setShowPassword(false);
     setShowRegister(false);
     // Return to Home rather than an old screen on the next login.
-    setShowMoodPreferences(false);
+    setShowMoodPreferences(false); // Close the preference screen.
+    setShowHistory(false); // Close activity history.
+    setShowMyActivities(false); // Close the personal collection.
+    setPersonalActivity(null); // Clear the chosen personal activity.
+    setSelectedPreferences(null); // Clear the previous session's choices.
+    setActiveActivity(null); // Clear the timer's activity..
 
     console.info('[Auth] Logout successful');
   } catch (error) {
@@ -186,6 +199,20 @@ if (showRegister) {
 }
 
 if (user) {
+    // Open the user's personal activity collection.
+  if (showMyActivities) {
+    return (
+      <MyActivitiesScreen
+        onBack={() => setShowMyActivities(false)}
+        onStartActivity={(activity) => {
+          setPersonalActivity(activity); // Remember which activity was chosen.
+          setSelectedPreferences(null); // Clear any previous session preferences.
+          setShowMyActivities(false); // Close the collection.
+          setShowMoodPreferences(true); // Ask for the new session's preferences.
+        }}
+      />
+    );
+  }
   // Show saved sessions when history is opened.
   if (showHistory) {
     return (
@@ -208,6 +235,8 @@ if (user) {
           setActiveActivity(null);
           setSelectedPreferences(null);
           setShowMoodPreferences(false);
+          setPersonalActivity(null); // Clear the personal activity after a successful completion.
+
         }}
       />
     );
@@ -225,12 +254,47 @@ if (user) {
   }
 
   // Collect preferences before choosing an activity.
+    // Collect preferences for either recommendations or a personal activity.
   if (showMoodPreferences) {
     return (
       <MoodPreferencesScreen
-        onBack={() => setShowMoodPreferences(false)}
+        continueLabel={personalActivity ? 'Open activity timer →' : 'Find my activities →'}
+        onBack={() => {
+          setShowMoodPreferences(false);
+          
+
+          if (personalActivity) {
+            setPersonalActivity(null); // Cancel starting the personal activity.
+            setShowMyActivities(true); // Return to the collection.
+          }
+        }}
         onContinue={(preferences) => {
-          setSelectedPreferences(preferences); // Keep the submitted choices.
+          if (
+            personalActivity &&
+            personalActivity.minutes > preferences.minutes
+          ) {
+            // The chosen activity must fit the user's available time.
+            Alert.alert(
+              'More time needed',
+              `This activity takes ${personalActivity.minutes} minutes. Choose at least that much available time.`
+            );
+            return;
+          }
+
+          setSelectedPreferences(preferences); // Keep the session's choices.
+
+          if (personalActivity) {
+            // Convert the personal activity into the timer's Activity format.
+            setActiveActivity({
+              id: personalActivity.id,
+              title: personalActivity.title,
+              description: personalActivity.description,
+              minutes: personalActivity.minutes,
+              energy: preferences.energy,
+              location: preferences.location,
+              moods: [preferences.mood],
+            });
+          }
         }}
       />
     );
@@ -244,6 +308,7 @@ if (user) {
       loggingOut={loggingOut}
       onCheckIn={() => setShowMoodPreferences(true)}
       onHistory={() => setShowHistory(true)}
+      onMyActivities={() => setShowMyActivities(true)}
     />
   );
 } // End the signed-in screen selection.

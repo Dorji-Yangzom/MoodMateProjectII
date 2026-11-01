@@ -21,6 +21,7 @@ type Props = {
   loggingOut: boolean;
   onCheckIn: () => void;
   onHistory: () => void; // Ask App.tsx to open activity history.
+  onMyActivities: () => void; // Ask App.tsx to open personal activities.
 };
 
 export default function HomeScreen({
@@ -29,6 +30,7 @@ export default function HomeScreen({
   loggingOut,
   onCheckIn,
   onHistory,
+  onMyActivities,
 }: Props) {
 
 // Keep the values empty until the saved profile loads.
@@ -216,16 +218,28 @@ useEffect(() => {
         </Text>
 
         <View style={styles.grid}>
-          <View style={[styles.quickCard, styles.lavenderCard]}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.cardEmoji}>📋</Text>
-            </View>
-            <Text style={styles.cardTitle}>My Activities</Text>
-            <Text style={styles.cardDescription}>
-              Make time for what you enjoy.
-            </Text>
-            <Text style={styles.comingSoon}>Coming soon</Text>
-          </View>
+          {/* Open the user's personal activity collection. */}
+          <Pressable
+              onPress={onMyActivities}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.quickCard,
+                styles.lavenderCard,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <View style={styles.iconCircle}>
+                  <Text style={styles.cardEmoji}>📋</Text>
+              </View>
+
+              <Text style={styles.cardTitle}>My Activities</Text>
+
+              <Text style={styles.cardDescription}>
+                  Make time for what you enjoy.
+              </Text>
+
+              <Text style={styles.comingSoon}>Open collection →</Text>
+            </Pressable>
 
           <View style={[styles.quickCard, styles.pinkCard]}>
             <View style={styles.iconCircle}>

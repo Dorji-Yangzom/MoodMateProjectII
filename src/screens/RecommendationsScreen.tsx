@@ -9,6 +9,8 @@ import {
 import type { MoodPreferences } from './MoodPreferencesScreen';
 import { recommendActivities } from '../services/recommendations';
 import type { Activity } from '../services/recommendations';
+import { useEffect, useState } from 'react';
+import { getRecentActivityIds } from '../services/recentActivities';
 
 type Props = {
   preferences: MoodPreferences;
@@ -22,8 +24,45 @@ export default function RecommendationsScreen({
   onStartActivity,
 }: Props) {
 
-  // Rank activities using the user's selected preferences.
-  const recommendations = recommendActivities(preferences);
+  const [recentIds, setRecentIds] = useState<string[]>([]); // Store recent activity IDs.
+  const [loadingRecent, setLoadingRecent] = useState(true); // Track history loading.
+  const [historyError, setHistoryError] = useState(false); // Track a failed history read.
+
+  useEffect(() => {
+    let active = true; // Prevent state updates after this screen closes.
+
+    async function loadRecentActivities() {
+      try {
+        const ids = await getRecentActivityIds(); // Read the last three sessions.
+
+        if (active) {
+          setRecentIds(ids); // Use these IDs when ranking activities.
+        }
+      } catch (error) {
+        console.warn('[Recommendations] Could not load recent activities');
+
+        if (active) {
+          setHistoryError(true); // Explain that history could not be included.
+        }
+      } finally {
+        if (active) {
+          setLoadingRecent(false); // Finish loading after success or failure.
+        }
+      }
+    }
+
+    void loadRecentActivities(); // Start reading history when this screen opens.
+
+    return () => {
+      active = false; // Ignore results if the user has left this screen.
+    };
+  }, []);
+
+  // Wait for history before displaying the ranked cards.
+  // If history fails, still recommend using the selected preferences.
+  const recommendations = loadingRecent
+    ? []
+    : recommendActivities(preferences, recentIds);
 
   return (
     <View style={styles.container}>
@@ -52,6 +91,17 @@ export default function RecommendationsScreen({
             Up to {preferences.minutes} min · {preferences.location}
           </Text>
         </View>
+
+        {/* Explain loading and any fallback to preferences alone. */}
+        {loadingRecent && (
+            <Text style={styles.subtitle}>Finding activities for you...</Text>
+        )}
+
+        {historyError && (
+            <Text style={styles.subtitle}>
+              Recent history could not load. These picks use your preferences.
+            </Text>
+        )}
 
         {recommendations.map((activity, index) => (
           <View key={activity.id} style={styles.card}>
@@ -88,7 +138,7 @@ export default function RecommendationsScreen({
             ))}
 
         {/* Explain when no activities meet the selected limits. */}
-        {recommendations.length === 0 && (
+        {!loadingRecent && recommendations.length === 0 && (
           <View style={styles.card}>
             <Text style={styles.activityTitle}>No matching activities</Text>
             <Text style={styles.description}>
