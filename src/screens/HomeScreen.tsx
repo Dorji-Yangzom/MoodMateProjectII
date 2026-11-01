@@ -19,12 +19,16 @@ type Props = {
   email: string | null;
   onLogout: () => void;
   loggingOut: boolean;
+  onCheckIn: () => void;
+  onHistory: () => void; // Ask App.tsx to open activity history.
 };
 
 export default function HomeScreen({
   email,
   onLogout,
   loggingOut,
+  onCheckIn,
+  onHistory,
 }: Props) {
 
 // Keep the values empty until the saved profile loads.
@@ -152,22 +156,59 @@ useEffect(() => {
           </View>
         </View>
 
-        <View style={styles.moodCard}>
-          <View style={styles.moodHeading}>
-            <Text style={styles.moodLabel}>A MOMENT FOR YOU</Text>
-            <Text style={styles.moodEmoji}>🌷</Text>
-          </View>
+        {/* Open mood preferences when this card is tapped. */}
+<Pressable
+  onPress={onCheckIn}
+  accessibilityRole="button"
+  accessibilityLabel="Choose your mood and activity preferences"
+  style={({ pressed }) => [
+    styles.moodCard,
+    pressed && styles.pressed,
+  ]}
+>
+  <View style={styles.moodHeading}>
+    <Text style={styles.moodLabel}>A MOMENT FOR YOU</Text>
+    <Text style={styles.moodEmoji}>🌷</Text>
+  </View>
 
-          <Text style={styles.moodTitle}>How are you{'\n'}feeling today?</Text>
-          <Text style={styles.moodDescription}>
-            Every feeling deserves a little kindness.
-          </Text>
+  <Text style={styles.moodTitle}>
+    How are you{'\n'}feeling today?
+  </Text>
 
-          <View style={styles.moodFooter}>
-            <Text style={styles.moodFaces}>😊   😌   😐   😔</Text>
-            <Text style={styles.smallNote}>Check-in coming soon</Text>
-          </View>
-        </View>
+  <Text style={styles.moodDescription}>
+    Every feeling deserves a little kindness.
+  </Text>
+
+  <View style={styles.moodFooter}>
+    <Text style={styles.moodFaces}>😊   😌   😐   😔</Text>
+    <Text style={styles.smallNote}>Start your check-in →</Text>
+  </View>
+</Pressable>
+
+{/* Open the user's saved activity history. */}
+<Pressable
+  onPress={onHistory}
+  accessibilityRole="button"
+  style={({ pressed }) => ({
+    backgroundColor: '#F0E8FC',
+    borderRadius: 20,
+    padding: 18,
+    marginTop: 20,
+    marginBottom: 20,
+    opacity: pressed ? 0.75 : 1,
+  })}
+>
+  <Text
+    style={{
+      color: '#795891',
+      fontSize: 16,
+      fontWeight: '700',
+      textAlign: 'center',
+    }}
+  >
+    View activity history →
+  </Text>
+</Pressable>
 
         <Text style={styles.sectionTitle}>Your daily space</Text>
         <Text style={styles.sectionSubtitle}>
@@ -211,7 +252,7 @@ useEffect(() => {
             <Text style={styles.statEmoji}>🔥</Text>
             <Text style={styles.statValue}>{streak ?? '—'}</Text>
             <Text style={styles.statLabel}>Day streak</Text>
-          </View>
+          </View>          
         </View>
 
         <Text style={styles.progressNote}>

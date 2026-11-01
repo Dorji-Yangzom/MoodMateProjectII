@@ -9,15 +9,23 @@ import {
   View,
 } from 'react-native';
 import type { Activity } from '../services/recommendations';
+import { FirebaseError } from 'firebase/app';
+import type { MoodPreferences } from './MoodPreferencesScreen';
+import {
+  createSessionId,
+  saveCompletedActivity,
+} from '../services/activityProgress';
 
 type Props = {
   activity: Activity;
+  preferences: MoodPreferences;
   onBack: () => void;
   onComplete: () => void;
 };
 
 export default function ActivitySessionScreen({
   activity,
+  preferences,
   onBack,
   onComplete,
 }: Props) {
@@ -31,6 +39,13 @@ export default function ActivitySessionScreen({
   const remaining = useRef(totalSeconds);
   const finishTime = useRef<number | null>(null);
   const completed = useRef(false);
+
+  // Generate one ID when this screen opens.
+  // Retrying a failed save uses this same ID to avoid duplicate points.
+  const [sessionId] = useState(() => createSessionId());
+
+  // Show when Firebase is saving and prevent repeated button taps.
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!running) return;
@@ -81,24 +96,59 @@ export default function ActivitySessionScreen({
   }
 
   function handleBack() {
-    Alert.alert(
-      'Leave this activity?',
-      'This session will be discarded and will not count as completed.',
-      [
-        { text: 'Stay', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: onBack },
-      ]
-    );
+      // Prevent leaving while Firebase is saving the completed activity.
+      // This avoids closing the screen before the save result is known.
+      if (completed.current) {
+        return;
+      }
+
+      Alert.alert(
+        'Leave this activity?',
+        'This session will be discarded and will not count as completed.',
+        [
+         { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: onBack },
+        ]
+      );
+    }
+
+  async function handleComplete() {
+  // Block completion while time remains or a save is already running.
+  if (remaining.current > 0 || completed.current) {
+    return;
   }
 
-  function handleComplete() {
-    // Check the timer in the handler as well as disabling the button.
-    if (remaining.current > 0 || completed.current) return;
+  // Block repeated taps immediately and show the saving message.
+  completed.current = true;
+  setSaving(true);
 
-    // Prevent repeated taps from completing this session twice.
-    completed.current = true;
+  try {
+    // Save history, points and streak together in Firebase.
+    // Reusing the same session ID prevents duplicate points.
+    await saveCompletedActivity(sessionId, activity, preferences);
+
+    console.info('[Activity] Completion saved');
+
+    // Return home only after the save succeeds.
     onComplete();
+  } catch (error) {
+    const code =
+      error instanceof FirebaseError ? error.code : 'unknown';
+
+    console.warn('[Activity] Save failed:', code);
+
+    // Allow the user to retry with the same session ID.
+    completed.current = false;
+
+    Alert.alert(
+      'Could not save activity',
+      'Check your connection and tap Complete activity again.'
+    );
+  } finally {
+    // Stop showing the saving message when the request finishes.
+    setSaving(false);
   }
+}
 
   // Format seconds as minutes:seconds, for example 04:09.
   const minutesText = Math.floor(secondsLeft / 60)
@@ -160,7 +210,7 @@ export default function ActivitySessionScreen({
 
         <Pressable
           onPress={handleComplete}
-          disabled={!finished}
+          disabled={!finished || saving}
           accessibilityRole="button"
           accessibilityState={{ disabled: !finished }}
           style={({ pressed }) => [
@@ -168,7 +218,8 @@ export default function ActivitySessionScreen({
             (!finished || pressed) && styles.dimmed,
           ]}
         >
-          <Text style={styles.completeText}>Complete activity ✓</Text>
+          <Text style={styles.completeText}>
+            {saving ? 'Saving...' : 'Complete activity'} ✓</Text>
         </Pressable>
 
         <Text style={styles.footer}>
