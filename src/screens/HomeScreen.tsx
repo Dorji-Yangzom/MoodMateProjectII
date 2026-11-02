@@ -22,6 +22,7 @@ type Props = {
   onCheckIn: () => void;
   onHistory: () => void; // Ask App.tsx to open activity history.
   onMyActivities: () => void; // Ask App.tsx to open personal activities.
+  onJournal: () => void; // Ask App.tsx to open the journal.
 };
 
 export default function HomeScreen({
@@ -31,6 +32,7 @@ export default function HomeScreen({
   onCheckIn,
   onHistory,
   onMyActivities,
+  onJournal,
 }: Props) {
 
 // Keep the values empty until the saved profile loads.
@@ -241,17 +243,29 @@ useEffect(() => {
               <Text style={styles.comingSoon}>Open collection →</Text>
             </Pressable>
 
-          <View style={[styles.quickCard, styles.pinkCard]}>
+          {/* Open the journal when the user taps this card. */}
+          <Pressable
+            onPress={onJournal}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.quickCard,
+              styles.pinkCard,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
+          >
             <View style={styles.iconCircle}>
               <Text style={styles.cardEmoji}>📖</Text>
             </View>
+
             <Text style={styles.cardTitle}>Mood Journal</Text>
+
             <Text style={styles.cardDescription}>
               A little space for your thoughts.
             </Text>
-            <Text style={styles.comingSoon}>Coming soon</Text>
+
+            <Text style={styles.comingSoon}>Open journal →</Text>
+          </Pressable>
           </View>
-        </View>
 
         <Text style={styles.sectionTitle}>Your progress</Text>
 

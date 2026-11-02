@@ -11,6 +11,7 @@ import type { Activity } from './src/services/recommendations';
 import ActivityHistoryScreen from './src/screens/ActivityHistoryScreen'; // Import the history screen.
 import MyActivitiesScreen from './src/screens/MyActivitiesScreen';
 import type { PersonalActivity } from './src/services/personalActivities';
+import JournalScreen from './src/screens/JournalScreen';
 
 import {
   onAuthStateChanged,
@@ -45,6 +46,7 @@ export default function App() {
   // Controls whether the mood selection screen is visible.
   const [showMoodPreferences, setShowMoodPreferences] = useState(false);
   const [showHistory, setShowHistory] = useState(false); // Control whether history is visible.
+  const [showJournal, setShowJournal] = useState(false); // Control journal visibility.
 
   const [showMyActivities, setShowMyActivities] = useState(false); // Control the personal activity screen.
   // Remember the personal activity while the user selects session preferences.
@@ -87,6 +89,7 @@ async function handleLogout() {
     // Return to Home rather than an old screen on the next login.
     setShowMoodPreferences(false); // Close the preference screen.
     setShowHistory(false); // Close activity history.
+    setShowJournal(false); // Close the journal before another user signs in.
     setShowMyActivities(false); // Close the personal collection.
     setPersonalActivity(null); // Clear the chosen personal activity.
     setSelectedPreferences(null); // Clear the previous session's choices.
@@ -199,6 +202,16 @@ if (showRegister) {
 }
 
 if (user) {
+
+    // Open the journal when selected from Home.
+  if (showJournal) {
+    return (
+      <JournalScreen
+        onBack={() => setShowJournal(false)}
+      />
+    );
+  }
+
     // Open the user's personal activity collection.
   if (showMyActivities) {
     return (
@@ -309,6 +322,7 @@ if (user) {
       onCheckIn={() => setShowMoodPreferences(true)}
       onHistory={() => setShowHistory(true)}
       onMyActivities={() => setShowMyActivities(true)}
+      onJournal={() => setShowJournal(true)}
     />
   );
 } // End the signed-in screen selection.
