@@ -3,6 +3,7 @@ import {
   doc,
   runTransaction,
   serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -25,5 +26,30 @@ export async function ensureUserProfile(user: User): Promise<void> {
       lastActiveDate: null,
       createdAt: serverTimestamp(),
     });
+  });
+}
+
+// Update only the profile name, preserving points and streaks.
+export async function updateProfileName(
+  user: User,
+  name: string
+): Promise<void> {
+  const trimmedName = name.trim(); // Remove surrounding spaces.
+
+  // Require a readable name before sending anything to Firebase.
+  if (trimmedName.length === 0) {
+    throw new Error('Please enter your name.');
+  }
+
+  if (trimmedName.length > 50) {
+    throw new Error('Please keep your name within 50 characters.');
+  }
+
+  const profileRef = doc(db, 'users', user.uid);
+
+  // Store the name in Firestore, where our profile screen will read it.
+  await updateDoc(profileRef, {
+    displayName: trimmedName,
+    updatedAt: serverTimestamp(),
   });
 }

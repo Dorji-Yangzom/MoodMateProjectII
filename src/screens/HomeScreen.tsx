@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import {
   Alert,
+  AppState,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import { FirebaseError } from 'firebase/app';
 import { auth, db } from '../services/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { ensureUserProfile } from '../services/userProfile';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   email: string | null;
@@ -23,6 +25,7 @@ type Props = {
   onHistory: () => void; // Ask App.tsx to open activity history.
   onMyActivities: () => void; // Ask App.tsx to open personal activities.
   onJournal: () => void; // Ask App.tsx to open the journal.
+  onProgress: () => void; // Ask App.tsx to open the weekly summary.
 };
 
 export default function HomeScreen({
@@ -33,12 +36,69 @@ export default function HomeScreen({
   onHistory,
   onMyActivities,
   onJournal,
+  onProgress, 
 }: Props) {
+
+  // Apply the selected theme to Home.
+const { isDark, colours } = useTheme();
+const styles = createStyles(colours);
 
 // Keep the values empty until the saved profile loads.
 const [points, setPoints] = useState<number | null>(null);
 const [streak, setStreak] = useState<number | null>(null);
 const [profileError, setProfileError] = useState(false);
+// Read the user's saved name for the welcome greeting.
+const [displayName, setDisplayName] = useState('');
+// Remember the date of the user's latest activity or journal entry.
+const [lastActiveDate, setLastActiveDate] = useState<string | null>(null);
+
+// Keep the displayed streak up to date when the calendar day changes.
+const [now, setNow] = useState(() => new Date());
+
+useEffect(() => {
+  function updateClock() {
+    setNow(new Date()); // Read the phone's current local date and time.
+  }
+
+  // Check periodically while Home remains open.
+  const timer = setInterval(updateClock, 30_000);
+
+  // Check immediately when returning from the background.
+  const subscription = AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      updateClock();
+    }
+  });
+
+  return () => {
+    clearInterval(timer); // Stop checking when Home closes.
+    subscription.remove(); // Remove the background listener.
+  };
+}, []);
+
+// Format dates using the same local-calendar format as saved progress.
+function getDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+const todayKey = getDateKey(now);
+
+const yesterday = new Date(now);
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayKey = getDateKey(yesterday);
+
+// Yesterday's streak stays active while the user still has today to check in.
+// An older date means at least one full calendar day was missed.
+const displayedStreak =
+  streak === null
+    ? null
+    : lastActiveDate === todayKey || lastActiveDate === yesterdayKey
+      ? streak
+      : 0;
 
 useEffect(() => {
   let active = true;
@@ -83,6 +143,11 @@ useEffect(() => {
 
           const data = snapshot.data();
 
+          // Update the greeting whenever the saved profile name changes.
+          setDisplayName(
+            typeof data.displayName === 'string' ? data.displayName.trim() : ''
+          );
+
           // Check that Firestore returned valid numbers.
           const validPoints =
             Number.isInteger(data.points) && data.points >= 0;
@@ -92,6 +157,12 @@ useEffect(() => {
 
           setPoints(validPoints ? data.points : null);
           setStreak(validStreak ? data.currentStreak : null);
+
+          // Both journal entries and completed activities update this saved date.
+          setLastActiveDate(
+            typeof data.lastActiveDate === 'string' ? data.lastActiveDate : null
+          );
+
           setProfileError(!validPoints || !validStreak);
 
           console.info('[Firestore] Profile values loaded');
@@ -118,7 +189,7 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -149,7 +220,9 @@ useEffect(() => {
 
         <View style={styles.welcome}>
           <Text style={styles.eyebrow}>YOUR LITTLE SELF-CARE SPACE</Text>
-          <Text style={styles.greeting}>{greeting} 🌸</Text>
+          <Text style={styles.greeting}>
+            {greeting}{displayName ? `, ${displayName}` : ''} 🌸
+          </Text>
           <Text style={styles.welcomeText}>
             A fresh moment to check in with yourself.
           </Text>
@@ -194,10 +267,34 @@ useEffect(() => {
   onPress={onHistory}
   accessibilityRole="button"
   style={({ pressed }) => ({
-    backgroundColor: '#F0E8FC',
+    backgroundColor: colours.lavender,
     borderRadius: 20,
     padding: 18,
     marginTop: 20,
+    marginBottom: 20,
+    opacity: pressed ? 0.75 : 1,
+  })}
+>
+  <Text
+    style={{
+      color: colours.primary,
+      fontSize: 16,
+      fontWeight: '700',
+      textAlign: 'center',
+    }}
+  >
+    View activity history →
+  </Text>
+</Pressable>
+
+{/* Open the weekly summary of saved journal moods. */}
+<Pressable
+  onPress={onProgress}
+  accessibilityRole="button"
+  style={({ pressed }) => ({
+    backgroundColor: '#F0E8FC',
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 20,
     opacity: pressed ? 0.75 : 1,
   })}
@@ -210,7 +307,7 @@ useEffect(() => {
       textAlign: 'center',
     }}
   >
-    View activity history →
+    View weekly moods →
   </Text>
 </Pressable>
 
@@ -278,7 +375,7 @@ useEffect(() => {
 
           <View style={[styles.statCard, styles.peachCard]}>
             <Text style={styles.statEmoji}>🔥</Text>
-            <Text style={styles.statValue}>{streak ?? '—'}</Text>
+            <Text style={styles.statValue}>{displayedStreak ?? '—'}</Text>
             <Text style={styles.statLabel}>Day streak</Text>
           </View>          
         </View>
@@ -302,230 +399,264 @@ useEffect(() => {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 64 : 52,
-    paddingBottom: 48,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 32,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-  },
-  brandIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: '#F0E6FC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandEmoji: { fontSize: 19 },
-  brand: {
-    fontSize: 21,
-    fontWeight: '800',
-    color: '#7545AF',
-  },
-  logoutButton: {
-    minHeight: 44,
-    paddingHorizontal: 15,
-    justifyContent: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EADFF3',
-  },
-  logoutText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#795891',
-  },
-  welcome: { marginBottom: 26 },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.6,
-    color: '#9A7AAD',
-    marginBottom: 10,
-  },
-  greeting: {
-    fontSize: 29,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-    color: '#302B42',
-  },
-  welcomeText: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 8,
-  },
-  accountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-    gap: 8,
-    marginTop: 14,
-    backgroundColor: '#F5EFFA',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  accountIcon: { color: '#9572AE', fontSize: 15 },
-  email: { flexShrink: 1, fontSize: 12, color: '#7F6C91' },
-  moodCard: {
-    padding: 24,
-    borderRadius: 28,
-    backgroundColor: '#FBEAF6',
-    borderWidth: 1,
-    borderColor: '#F7DFF0',
-  },
-  moodHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  moodLabel: {
-    fontSize: 10,
-    letterSpacing: 1.4,
-    fontWeight: '700',
-    color: '#A46598',
-  },
-  moodEmoji: { fontSize: 34 },
-  moodTitle: {
-    fontSize: 29,
-    lineHeight: 36,
-    fontWeight: '800',
-    color: '#59365D',
-    marginTop: 8,
-  },
-  moodDescription: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#956D91',
-    marginTop: 10,
-  },
-  moodFooter: {
-    marginTop: 22,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#EED6E8',
-    gap: 10,
-  },
-  moodFaces: { fontSize: 25 },
-  smallNote: { fontSize: 11, color: '#956D91' },
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#302B42',
-    marginTop: 28,
-    marginBottom: 6,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#8A8095',
-    marginBottom: 6,
-  },
-  grid: {
-    flexDirection: 'row',
-    gap: 14,
-    marginTop: 12,
-  },
-  quickCard: {
-    flex: 1,
-    borderRadius: 23,
-    padding: 17,
-  },
-  lavenderCard: { backgroundColor: '#F0E8FC' },
-  pinkCard: { backgroundColor: '#FCECF4' },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  cardEmoji: { fontSize: 23 },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 7,
-  },
-  cardDescription: {
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#85718F',
-  },
-  comingSoon: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#86629F',
-    marginTop: 14,
-  },
-  statCard: {
-    flex: 1,
-    padding: 20,
-    borderRadius: 23,
-    alignItems: 'center',
-  },
-  yellowCard: { backgroundColor: '#FFF5D9' },
-  peachCard: { backgroundColor: '#FFECE7' },
-  statEmoji: { fontSize: 26 },
-  statValue: {
-    fontSize: 27,
-    fontWeight: '800',
-    color: '#493655',
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#85718F',
-    marginTop: 4,
-  },
-  progressNote: {
-    fontSize: 11,
-    lineHeight: 17,
-    color: '#94869F',
-    marginTop: 12,
-  },
-  quoteCard: {
-    alignItems: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  quote: {
-    fontSize: 16,
-    lineHeight: 25,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    color: '#8D6CA1',
-  },
-  quoteFooter: {
-    fontSize: 10,
-    color: '#AA98B6',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  pressed: { opacity: 0.65 },
-});
+// Shared theme colours keep Home readable in light and dark mode.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === 'ios' ? 64 : 52,
+      paddingBottom: 48,
+    },
+
+    // Brand and logout button.
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: 12,
+      marginBottom: 32,
+    },
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+    },
+    brandIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 14,
+      backgroundColor: colours.lavender,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    brandEmoji: { fontSize: 19 },
+    brand: {
+      fontSize: 21,
+      fontWeight: '800',
+      color: colours.primary,
+    },
+    logoutButton: {
+      minHeight: 44,
+      paddingHorizontal: 15,
+      justifyContent: 'center',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colours.border,
+    },
+    logoutText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colours.primary,
+    },
+
+    // Greeting and account details.
+    welcome: { marginBottom: 26 },
+    eyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.6,
+      color: colours.muted,
+      marginBottom: 10,
+    },
+    greeting: {
+      fontSize: 29,
+      fontWeight: '800',
+      letterSpacing: -0.8,
+      color: colours.text,
+    },
+    welcomeText: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 8,
+    },
+    accountBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      maxWidth: '100%',
+      gap: 8,
+      marginTop: 14,
+      backgroundColor: colours.input,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    accountIcon: {
+      color: colours.muted,
+      fontSize: 15,
+    },
+    email: {
+      flexShrink: 1,
+      fontSize: 12,
+      color: colours.muted,
+    },
+
+    // Main mood check-in card.
+    moodCard: {
+      padding: 24,
+      borderRadius: 28,
+      backgroundColor: colours.pink,
+      borderWidth: 1,
+      borderColor: colours.border,
+    },
+    moodHeading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    moodLabel: {
+      fontSize: 10,
+      letterSpacing: 1.4,
+      fontWeight: '700',
+      color: colours.muted,
+    },
+    moodEmoji: { fontSize: 34 },
+    moodTitle: {
+      fontSize: 29,
+      lineHeight: 36,
+      fontWeight: '800',
+      color: colours.text,
+      marginTop: 8,
+    },
+    moodDescription: {
+      fontSize: 14,
+      lineHeight: 22,
+      color: colours.muted,
+      marginTop: 10,
+    },
+    moodFooter: {
+      marginTop: 22,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colours.border,
+      gap: 10,
+    },
+    moodFaces: { fontSize: 25 },
+    smallNote: {
+      fontSize: 11,
+      color: colours.muted,
+    },
+
+    // Personal activity and journal cards.
+    sectionTitle: {
+      fontSize: 19,
+      fontWeight: '800',
+      color: colours.text,
+      marginTop: 28,
+      marginBottom: 6,
+    },
+    sectionSubtitle: {
+      fontSize: 13,
+      color: colours.muted,
+      marginBottom: 6,
+    },
+    grid: {
+      flexDirection: 'row',
+      gap: 14,
+      marginTop: 12,
+    },
+    quickCard: {
+      flex: 1,
+      borderRadius: 23,
+      padding: 17,
+    },
+    lavenderCard: {
+      backgroundColor: colours.lavender,
+    },
+    pinkCard: {
+      backgroundColor: colours.pink,
+    },
+    iconCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 15,
+      backgroundColor: colours.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+    },
+    cardEmoji: { fontSize: 23 },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 7,
+    },
+    cardDescription: {
+      fontSize: 12,
+      lineHeight: 19,
+      color: colours.muted,
+    },
+    comingSoon: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: colours.primary,
+      marginTop: 14,
+    },
+
+    // Points and current streak.
+    statCard: {
+      flex: 1,
+      padding: 20,
+      borderRadius: 23,
+      alignItems: 'center',
+    },
+    yellowCard: {
+      backgroundColor: colours.yellow,
+    },
+    peachCard: {
+      backgroundColor: colours.pink,
+    },
+    statEmoji: { fontSize: 26 },
+    statValue: {
+      fontSize: 27,
+      fontWeight: '800',
+      color: colours.text,
+      marginTop: 8,
+    },
+    statLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colours.muted,
+      marginTop: 4,
+    },
+    progressNote: {
+      fontSize: 11,
+      lineHeight: 17,
+      color: colours.muted,
+      marginTop: 12,
+    },
+
+    // Closing quote.
+    quoteCard: {
+      alignItems: 'center',
+      paddingVertical: 28,
+      paddingHorizontal: 16,
+      marginTop: 24,
+    },
+    quote: {
+      fontSize: 16,
+      lineHeight: 25,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      color: colours.muted,
+    },
+    quoteFooter: {
+      fontSize: 10,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 12,
+    },
+    pressed: { opacity: 0.65 },
+  });

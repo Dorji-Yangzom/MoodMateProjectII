@@ -21,6 +21,7 @@ import {
   updatePersonalActivity,
 } from '../services/personalActivities';
 import type { PersonalActivity } from '../services/personalActivities';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   onBack: () => void; // Return to Home.
@@ -31,6 +32,10 @@ export default function MyActivitiesScreen({
   onBack,
   onStartActivity,
 }: Props) {
+
+    // Match the form and activity cards to the selected theme.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours, isDark);
 
   const [activities, setActivities] = useState<PersonalActivity[]>([]);
   const [loading, setLoading] = useState(true); // Track the initial list load.
@@ -198,7 +203,7 @@ export default function MyActivitiesScreen({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -230,7 +235,7 @@ export default function MyActivitiesScreen({
             value={title}
             onChangeText={setTitle}
             placeholder="For example, read a favourite book"
-            placeholderTextColor="#81778D"
+            placeholderTextColor={colours.muted}
             maxLength={80}
             editable={!busy}
             accessibilityLabel="Activity title"
@@ -286,7 +291,7 @@ export default function MyActivitiesScreen({
         <Text style={styles.cardTitle}>Your collection</Text>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#8950CF" />
+          <ActivityIndicator size="large" color={colours.primary} />
         ) : loadError ? (
           <View style={styles.card}>
             <Text style={styles.description}>{loadError}</Text>
@@ -353,100 +358,116 @@ export default function MyActivitiesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  title: {
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 10,
-    marginBottom: 24,
-  },
-  card: {
-    backgroundColor: '#F5EFFC',
-    padding: 20,
-    borderRadius: 24,
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#493655',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    color: '#302B42',
-    borderRadius: 16,
-    padding: 14,
-    fontSize: 15,
-    minHeight: 50,
-    marginBottom: 16,
-  },
-  multiline: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  button: {
-    backgroundColor: '#D63DE6',
-    padding: 16,
-    borderRadius: 22,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  linkButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
-  link: {
-    color: '#8950CF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 8,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 28,
-    marginTop: 10,
-  },
-  deleteText: {
-    color: '#B83264',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dimmed: {
-    opacity: 0.6,
-  },
-});
+// Shared colours adapt the screen to light and dark appearance.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours'],
+  isDark: boolean
+) =>
+  StyleSheet.create({
+    // Main screen spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    title: {
+      fontSize: 29,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 10,
+      marginBottom: 24,
+    },
+
+    // Form and saved activity cards.
+    card: {
+      backgroundColor: colours.lavender,
+      padding: 20,
+      borderRadius: 24,
+      marginBottom: 20,
+    },
+    cardTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 12,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colours.text,
+      marginBottom: 8,
+    },
+
+    // Title, description and duration inputs.
+    input: {
+      backgroundColor: colours.input,
+      color: colours.text,
+      borderRadius: 16,
+      padding: 14,
+      fontSize: 15,
+      minHeight: 50,
+      marginBottom: 16,
+    },
+    multiline: {
+      minHeight: 90,
+      textAlignVertical: 'top',
+    },
+
+    // Save and start buttons.
+    button: {
+      backgroundColor: colours.primary,
+      padding: 16,
+      borderRadius: 22,
+      alignItems: 'center',
+    },
+    buttonText: {
+      color: colours.buttonText,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+
+    // Back, retry and edit links.
+    linkButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+    },
+    link: {
+      color: colours.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    description: {
+      fontSize: 14,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 8,
+    },
+
+    // Actions below each saved activity.
+    actions: {
+      flexDirection: 'row',
+      gap: 28,
+      marginTop: 10,
+    },
+    deleteText: {
+      color: isDark ? '#FF9DB8' : '#B83264',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    dimmed: {
+      opacity: 0.6,
+    },
+  });

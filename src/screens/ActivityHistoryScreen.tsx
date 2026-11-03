@@ -17,6 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import { useTheme } from '../theme/ThemeContext';
 
 // The parent screen provides the action for returning home.
 type Props = {
@@ -34,6 +35,9 @@ type HistoryItem = {
 };
 
 export default function ActivityHistoryScreen({ onBack }: Props) {
+  // Match saved session cards to the selected theme.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,7 +104,7 @@ export default function ActivityHistoryScreen({ onBack }: Props) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
@@ -121,7 +125,7 @@ export default function ActivityHistoryScreen({ onBack }: Props) {
         {loading ? (
           <ActivityIndicator
             size="large"
-            color="#8950CF"
+            color={colours.primary}
             style={styles.loader}
           />
         ) : error ? (
@@ -173,83 +177,92 @@ export default function ActivityHistoryScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  backButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 18,
-  },
-  link: {
-    color: '#8950CF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    color: '#9A7AAD',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 10,
-    marginBottom: 26,
-  },
-  loader: {
-    marginTop: 40,
-  },
-  note: {
-    fontSize: 12,
-    color: '#94869F',
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: '#F5EFFC',
-    borderRadius: 24,
-    padding: 22,
-    marginBottom: 16,
-  },
-  date: {
-    fontSize: 12,
-    color: '#85718F',
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#81778D',
-  },
-  points: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#8950CF',
-    marginTop: 14,
-  },
-});
+// Theme changes affect appearance; saved history stays unchanged.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Screen background and spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    backButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+      marginBottom: 18,
+    },
+    link: {
+      color: colours.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+
+    // Heading and loading state.
+    eyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      color: colours.muted,
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 29,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 10,
+      marginBottom: 26,
+    },
+    loader: {
+      marginTop: 40,
+    },
+    note: {
+      fontSize: 12,
+      color: colours.muted,
+      marginBottom: 16,
+    },
+
+    // Completed session cards.
+    card: {
+      backgroundColor: colours.lavender,
+      borderRadius: 24,
+      padding: 22,
+      marginBottom: 16,
+    },
+    date: {
+      fontSize: 12,
+      color: colours.muted,
+      marginBottom: 10,
+    },
+    cardTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 8,
+    },
+    description: {
+      fontSize: 14,
+      lineHeight: 22,
+      color: colours.muted,
+    },
+    points: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colours.primary,
+      marginTop: 14,
+    },
+  });

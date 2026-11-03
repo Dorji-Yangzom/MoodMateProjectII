@@ -12,6 +12,11 @@ import ActivityHistoryScreen from './src/screens/ActivityHistoryScreen'; // Impo
 import MyActivitiesScreen from './src/screens/MyActivitiesScreen';
 import type { PersonalActivity } from './src/services/personalActivities';
 import JournalScreen from './src/screens/JournalScreen';
+import ProgressScreen from './src/screens/ProgressScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import BottomNavigation from './src/components/BottomNavigation';
+import type { MainTab } from './src/components/BottomNavigation';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 import {
   onAuthStateChanged,
@@ -36,7 +41,20 @@ import {
   View,
 } from 'react-native';
 
+// Make the theme available to every screen.
 export default function App() {
+  return (
+    <ThemeProvider>
+      <MoodMateApp />
+    </ThemeProvider>
+  );
+}
+
+// Keep all existing app state and navigation inside this component.
+function MoodMateApp() {
+  // Read the theme inside the component wrapped by ThemeProvider.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
   // Stores what the user types.
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +65,9 @@ export default function App() {
   const [showMoodPreferences, setShowMoodPreferences] = useState(false);
   const [showHistory, setShowHistory] = useState(false); // Control whether history is visible.
   const [showJournal, setShowJournal] = useState(false); // Control journal visibility.
+  const [showProgress, setShowProgress] = useState(false); // Control the weekly summary screen.
+  // Keep Profile separate from the Home layout.
+  const [showProfile, setShowProfile] = useState(false);
 
   const [showMyActivities, setShowMyActivities] = useState(false); // Control the personal activity screen.
   // Remember the personal activity while the user selects session preferences.
@@ -90,6 +111,8 @@ async function handleLogout() {
     setShowMoodPreferences(false); // Close the preference screen.
     setShowHistory(false); // Close activity history.
     setShowJournal(false); // Close the journal before another user signs in.
+    setShowProgress(false); // Close Progress before another user signs in.
+    setShowProfile(false); // Close Profile before another user signs in.
     setShowMyActivities(false); // Close the personal collection.
     setPersonalActivity(null); // Clear the chosen personal activity.
     setSelectedPreferences(null); // Clear the previous session's choices.
@@ -178,6 +201,41 @@ async function handleForgotPassword() {
   }
 }
 
+// Open a main section from the bottom navigation.
+function handleTabSelect(tab: MainTab) {
+  // Close the previous main section before opening another.
+  setShowJournal(false);
+  setShowProgress(false);
+  setShowProfile(false);
+
+  if (tab === 'journal') {
+    setShowJournal(true);
+  } else if (tab === 'progress') {
+    setShowProgress(true);
+  } else if (tab === 'profile') {
+    setShowProfile(true);
+  }
+  // Selecting Home leaves all three flags false.
+}
+
+// Place navigation below the screen so it never covers its content.
+function renderWithNavigation(
+  screen: React.ReactNode,
+  selected: MainTab
+) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colours.background }}>
+      <View style={{ flex: 1 }}>{screen}</View>
+
+      <BottomNavigation
+        selected={selected}
+        onSelect={handleTabSelect}
+        disabled={loggingOut}
+      />
+    </View>
+  );
+}
+
 if (checkingSession) {
   return (
     <View
@@ -186,9 +244,9 @@ if (checkingSession) {
         { justifyContent: 'center', alignItems: 'center' },
       ]}
     >
-      <StatusBar style="dark" />
-      <ActivityIndicator size="large" color="#9657E8" />
-      <Text style={{ marginTop: 16, color: '#6D6878' }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <ActivityIndicator size="large" color={colours.primary} />
+      <Text style={{ marginTop: 16, color: colours.muted }}>
         Opening MoodMate…
       </Text>
     </View>
@@ -202,6 +260,26 @@ if (showRegister) {
 }
 
 if (user) {
+
+    // Open Profile without adding another card to Home.
+  if (showProfile) {
+    return (
+      <ProfileScreen
+        onBack={() => setShowProfile(false)}
+      />
+    );
+  }
+
+    // Show the weekly mood summary when opened from Home.
+    // Keep the bottom bar available while viewing weekly moods.
+  if (showProgress) {
+    return renderWithNavigation(
+      <ProgressScreen
+        onBack={() => setShowProgress(false)}
+      />,
+      'progress'
+    );
+  }
 
     // Open the journal when selected from Home.
   if (showJournal) {
@@ -313,19 +391,21 @@ if (user) {
     );
   }
 
-  // Show Home when no other signed-in screen is selected.
-  return (
-    <HomeScreen
-      email={user.email}
-      onLogout={handleLogout}
-      loggingOut={loggingOut}
-      onCheckIn={() => setShowMoodPreferences(true)}
-      onHistory={() => setShowHistory(true)}
-      onMyActivities={() => setShowMyActivities(true)}
-      onJournal={() => setShowJournal(true)}
-    />
-  );
-} // End the signed-in screen selection.
+    // Display Home above the bottom navigation.
+    return renderWithNavigation(
+      <HomeScreen
+        email={user.email}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+        onCheckIn={() => setShowMoodPreferences(true)}
+        onHistory={() => setShowHistory(true)}
+        onMyActivities={() => setShowMyActivities(true)}
+        onJournal={() => handleTabSelect('journal')}
+        onProgress={() => handleTabSelect('progress')}
+      />,
+      'home'
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -362,7 +442,7 @@ if (user) {
               <TextInput
                 style={styles.input}
                 placeholder="Email"
-                placeholderTextColor="#777282"
+                placeholderTextColor={colours.muted}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -445,126 +525,137 @@ if (user) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingTop: 64,
-    paddingBottom: 48,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 44,
-  },
-  logo: {
-    fontSize: 88,
-    lineHeight: 120,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#9657E8',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#6D6878',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  form: {
-    width: '100%',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2EBFC',
-    borderRadius: 24,
-    minHeight: 62,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  inputIcon: {
-    fontSize: 24,
-    color: '#777282',
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 17,
-    color: '#302B42',
-    paddingVertical: 18,
-  },
-  visibilityButton: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
-  },
-  visibilityText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#76509E',
-  },
-  forgotButton: {
-    alignSelf: 'flex-end',
-    minHeight: 44,
-    justifyContent: 'center',
-    marginBottom: 22,
-  },
-  forgotText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#B832C9',
-  },
-  loginButton: {
-    backgroundColor: '#D63DE6',
-    borderRadius: 30,
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  loginText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  orText: {
-    fontSize: 16,
-    color: '#777282',
-    textAlign: 'center',
-    marginVertical: 20,
-  },
-  createButton: {
-    backgroundColor: '#F2EBFC',
-    borderRadius: 30,
-    minHeight: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  createText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#8950CF',
-  },
-  pressed: {
-    opacity: 0.75,
-  },
-});
+// Use the selected theme for Login and the app loading screen.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Background and centred login layout.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 28,
+      paddingTop: 64,
+      paddingBottom: 48,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 440,
+      alignSelf: 'center',
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 44,
+    },
+    logo: {
+      fontSize: 88,
+      lineHeight: 120,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 40,
+      fontWeight: '800',
+      color: colours.primary,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 10,
+    },
+
+    // Email and password fields.
+    form: {
+      width: '100%',
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colours.input,
+      borderRadius: 24,
+      minHeight: 62,
+      paddingHorizontal: 16,
+      marginBottom: 16,
+    },
+    inputIcon: {
+      fontSize: 24,
+      color: colours.muted,
+      marginRight: 12,
+    },
+    input: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 17,
+      color: colours.text,
+      paddingVertical: 18,
+    },
+    visibilityButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 6,
+    },
+    visibilityText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colours.primary,
+    },
+
+    // Password reset link.
+    forgotButton: {
+      alignSelf: 'flex-end',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginBottom: 22,
+    },
+    forgotText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colours.primary,
+    },
+
+    // Login and registration buttons.
+    loginButton: {
+      backgroundColor: colours.primary,
+      borderRadius: 30,
+      minHeight: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    },
+    loginText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colours.buttonText,
+    },
+    orText: {
+      fontSize: 16,
+      color: colours.muted,
+      textAlign: 'center',
+      marginVertical: 20,
+    },
+    createButton: {
+      backgroundColor: colours.lavender,
+      borderRadius: 30,
+      minHeight: 56,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    },
+    createText: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colours.primary,
+    },
+    pressed: {
+      opacity: 0.75,
+    },
+  });

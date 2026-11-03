@@ -15,6 +15,7 @@ import {
   createSessionId,
   saveCompletedActivity,
 } from '../services/activityProgress';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   activity: Activity;
@@ -29,6 +30,10 @@ export default function ActivitySessionScreen({
   onBack,
   onComplete,
 }: Props) {
+
+  // Apply the theme without changing the timer or saved session.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
   // Convert the activity duration from minutes to seconds.
   const totalSeconds = activity.minutes * 60;
 
@@ -160,8 +165,7 @@ export default function ActivitySessionScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
-
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
           onPress={handleBack}
@@ -212,10 +216,10 @@ export default function ActivitySessionScreen({
           onPress={handleComplete}
           disabled={!finished || saving}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !finished }}
+          accessibilityState={{ disabled: !finished || saving, busy: saving }}
           style={({ pressed }) => [
             styles.completeButton,
-            (!finished || pressed) && styles.dimmed,
+            (!finished || saving || pressed) && styles.dimmed,
           ]}
         >
           <Text style={styles.completeText}>
@@ -232,108 +236,121 @@ export default function ActivitySessionScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  backButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 28,
-  },
-  backText: {
-    color: '#8950CF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  eyebrow: {
-    color: '#9A7AAD',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: '#81778D',
-    marginTop: 12,
-  },
-  timerCard: {
-    alignItems: 'center',
-    backgroundColor: '#F2EBFC',
-    borderRadius: 32,
-    paddingVertical: 42,
-    paddingHorizontal: 16,
-    marginVertical: 32,
-  },
-  timerEmoji: {
-    fontSize: 45,
-    marginBottom: 20,
-  },
-  timer: {
-    fontSize: 58,
-    fontWeight: '800',
-    color: '#7545AF',
-    fontVariant: ['tabular-nums'],
-  },
-  timerLabel: {
-    fontSize: 14,
-    color: '#9572AE',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#D63DE6',
-    minHeight: 56,
-    borderRadius: 26,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  completeButton: {
-    backgroundColor: '#8950CF',
-    minHeight: 56,
-    borderRadius: 26,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completeText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  footer: {
-    fontSize: 12,
-    lineHeight: 20,
-    color: '#94869F',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  dimmed: {
-    opacity: 0.45,
-  },
-});
+// Build the timer screen's appearance using the selected theme.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Background and screen spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      flexGrow: 1,
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    backButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+      marginBottom: 28,
+    },
+    backText: {
+      color: colours.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+
+    // Activity heading and instructions.
+    eyebrow: {
+      color: colours.muted,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      marginBottom: 12,
+    },
+    title: {
+      fontSize: 29,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    description: {
+      fontSize: 15,
+      lineHeight: 24,
+      color: colours.muted,
+      marginTop: 12,
+    },
+
+    // Countdown card.
+    timerCard: {
+      alignItems: 'center',
+      backgroundColor: colours.lavender,
+      borderRadius: 32,
+      paddingVertical: 42,
+      paddingHorizontal: 16,
+      marginVertical: 32,
+    },
+    timerEmoji: {
+      fontSize: 45,
+      marginBottom: 20,
+    },
+    timer: {
+      fontSize: 58,
+      fontWeight: '800',
+      color: colours.primary,
+      fontVariant: ['tabular-nums'],
+    },
+    timerLabel: {
+      fontSize: 14,
+      color: colours.muted,
+      marginTop: 12,
+      textAlign: 'center',
+    },
+
+    // Start, pause and resume button.
+    button: {
+      backgroundColor: colours.primary,
+      minHeight: 56,
+      borderRadius: 26,
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 14,
+    },
+    buttonText: {
+      color: colours.buttonText,
+      fontSize: 17,
+      fontWeight: '700',
+    },
+
+    // Complete remains disabled until the countdown ends.
+    completeButton: {
+      backgroundColor: colours.primary,
+      minHeight: 56,
+      borderRadius: 26,
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    completeText: {
+      color: colours.buttonText,
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    footer: {
+      fontSize: 12,
+      lineHeight: 20,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+    dimmed: {
+      opacity: 0.45,
+    },
+  });

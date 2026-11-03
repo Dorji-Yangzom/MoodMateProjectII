@@ -17,12 +17,17 @@ import {
   View,
 } from 'react-native';
 import { auth } from '../services/firebase';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   onBack: () => void;
 };
 
 export default function RegisterScreen({ onBack }: Props) {
+  // Match registration to the app's selected appearance.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -120,6 +125,8 @@ export default function RegisterScreen({ onBack }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -135,7 +142,7 @@ export default function RegisterScreen({ onBack }: Props) {
           <TextInput
             style={styles.input}
             placeholder="Enter your email"
-            placeholderTextColor="#777282"
+            placeholderTextColor={colours.muted}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -196,7 +203,7 @@ export default function RegisterScreen({ onBack }: Props) {
             ]}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color={colours.buttonText} />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
             )}
@@ -218,89 +225,102 @@ export default function RegisterScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingTop: 64,
-    paddingBottom: 48,
-  },
-  form: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-  },
-  logo: {
-    fontSize: 66,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#9657E8',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#6D6878',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#302B42',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#F2EBFC',
-    borderRadius: 22,
-    minHeight: 58,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#302B42',
-    marginBottom: 16,
-  },
-  linkButton: {
-    alignSelf: 'flex-end',
-    minHeight: 44,
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  link: {
-    color: '#8950CF',
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#D63DE6',
-    borderRadius: 30,
-    minHeight: 56,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  backButton: {
-    minHeight: 48,
-    justifyContent: 'center',
-    marginTop: 16,
-  },
-  dimmed: {
-    opacity: 0.65,
-  },
-});
+// Theme colours change appearance without changing registration logic.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Background and centred form.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 28,
+      paddingTop: 64,
+      paddingBottom: 48,
+    },
+    form: {
+      width: '100%',
+      maxWidth: 440,
+      alignSelf: 'center',
+    },
+
+    // Logo and introductory text.
+    logo: {
+      fontSize: 66,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: '800',
+      color: colours.primary,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 10,
+      marginBottom: 30,
+    },
+
+    // Email and password fields.
+    label: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colours.text,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: colours.input,
+      borderRadius: 22,
+      minHeight: 58,
+      paddingHorizontal: 18,
+      paddingVertical: 16,
+      fontSize: 16,
+      color: colours.text,
+      marginBottom: 16,
+    },
+
+    // Password visibility and login links.
+    linkButton: {
+      alignSelf: 'flex-end',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    link: {
+      color: colours.primary,
+      fontSize: 15,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+
+    // Create Account button and loading spinner.
+    button: {
+      backgroundColor: colours.primary,
+      borderRadius: 30,
+      minHeight: 56,
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonText: {
+      color: colours.buttonText,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    backButton: {
+      minHeight: 48,
+      justifyContent: 'center',
+      marginTop: 16,
+    },
+    dimmed: {
+      opacity: 0.65,
+    },
+  });

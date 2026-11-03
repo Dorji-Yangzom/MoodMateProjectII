@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 
 // These are the choices passed to the recommendation algorithm.
 export type MoodPreferences = {
@@ -16,10 +17,11 @@ export type MoodPreferences = {
   location: 'Indoor' | 'Outdoor';
 };
 
+// Describe the values supplied by App.tsx.
 type Props = {
   onBack: () => void;
   onContinue: (preferences: MoodPreferences) => void;
-  continueLabel?: string; // Allow the parent to customise the button wording.
+  continueLabel?: string;
 };
 
 // Reuse the same button design for each choice.
@@ -32,6 +34,10 @@ type ChoiceProps = {
 
 // Show the emoji and label separately so both remain visible.
 function Choice({ label, emoji, selected, onPress }: ChoiceProps) {
+    // Each choice reads the same shared theme as the screen.
+    const { colours } = useTheme();
+    const styles = createStyles(colours);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -71,6 +77,11 @@ export default function MoodPreferencesScreen({
   onContinue,
   continueLabel = 'Find my activities →',
 }: Props) {
+  // Hooks belong inside the screen function.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
+
+  // Store the user's selected options.
   // Store the user's selected options.
   const [mood, setMood] = useState<MoodPreferences['mood']>('Calm');
   const [energy, setEnergy] = useState<MoodPreferences['energy']>('Medium');
@@ -99,7 +110,7 @@ export default function MoodPreferencesScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
@@ -182,8 +193,7 @@ export default function MoodPreferencesScreen({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.buttonText}><Text style={styles.buttonText}>{continueLabel}</Text>
-           →</Text>
+          <Text style={styles.buttonText}>{continueLabel}</Text>
         </Pressable>
 
         <Text style={styles.footer}>
@@ -194,111 +204,126 @@ export default function MoodPreferencesScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    flexGrow: 1,
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    marginBottom: 22,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8950CF',
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    color: '#9A7AAD',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 10,
-    marginBottom: 26,
-  },
-  section: {
-    backgroundColor: '#F7F1FC',
-    padding: 20,
-    borderRadius: 24,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 14,
-  },
-  options: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  choice: {
-    minHeight: 46,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E8DDF2',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-  },
-  selectedChoice: {
-    backgroundColor: '#8950CF',
-    borderColor: '#8950CF',
-  },
-  choiceText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#796488',
-  },
-  selectedText: {
-    color: '#FFFFFF',
-  },
-  button: {
-    backgroundColor: '#D63DE6',
-    borderRadius: 26,
-    minHeight: 56,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  footer: {
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#94869F',
-    textAlign: 'center',
-    marginTop: 18,
-  },
-  pressed: {
-    opacity: 0.75,
-  },
-});
+// Share these themed styles between the screen and Choice components.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Screen background and spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      flexGrow: 1,
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginBottom: 22,
+    },
+    backText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colours.primary,
+    },
+
+    // Heading and introductory text.
+    eyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+      color: colours.muted,
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 10,
+      marginBottom: 26,
+    },
+
+    // Mood, energy, time and location sections.
+    section: {
+      backgroundColor: colours.input,
+      padding: 20,
+      borderRadius: 24,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 14,
+    },
+    options: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+
+    // Unselected choices use a surface colour.
+    choice: {
+      minHeight: 46,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colours.border,
+      backgroundColor: colours.surface,
+      justifyContent: 'center',
+    },
+
+    // Selected choices use a contrasting label on the primary colour.
+    selectedChoice: {
+      backgroundColor: colours.primary,
+      borderColor: colours.primary,
+    },
+    choiceText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colours.text,
+    },
+    selectedText: {
+      color: colours.buttonText,
+    },
+
+    // Continue button and footer.
+    button: {
+      backgroundColor: colours.primary,
+      borderRadius: 26,
+      minHeight: 56,
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+    },
+    buttonText: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colours.buttonText,
+    },
+    footer: {
+      fontSize: 12,
+      lineHeight: 19,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 18,
+    },
+    pressed: {
+      opacity: 0.75,
+    },
+  });

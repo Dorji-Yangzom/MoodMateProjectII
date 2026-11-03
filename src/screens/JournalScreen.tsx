@@ -21,6 +21,7 @@ import {
   updateJournalEntry,
 } from '../services/journal';
 import type { JournalEntry, JournalInput } from '../services/journal';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   onBack: () => void; // Ask App.tsx to return Home.
@@ -35,6 +36,9 @@ const moods: JournalInput['mood'][] = [
 ];
 
 export default function JournalScreen({ onBack }: Props) {
+    // Match the journal's appearance to the selected theme.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours, isDark);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [mood, setMood] = useState<JournalInput['mood']>('Calm');
   const [text, setText] = useState(''); // Store the current draft.
@@ -205,7 +209,7 @@ export default function JournalScreen({ onBack }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView
         ref={scrollRef}
@@ -261,7 +265,7 @@ export default function JournalScreen({ onBack }: Props) {
             value={text}
             onChangeText={setText}
             placeholder="What is on your mind today?"
-            placeholderTextColor="#81778D"
+            placeholderTextColor={colours.muted}
             multiline
             maxLength={2000}
             editable={!busy}
@@ -301,7 +305,7 @@ export default function JournalScreen({ onBack }: Props) {
         <Text style={styles.cardTitle}>Your recent entries</Text>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#8950CF" />
+          <ActivityIndicator size="large" color={colours.primary} />
         ) : error ? (
           <View style={styles.card}>
             <Text style={styles.body}>{error}</Text>
@@ -360,118 +364,136 @@ export default function JournalScreen({ onBack }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  title: {
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 10,
-    marginBottom: 24,
-  },
-  card: {
-    backgroundColor: '#F8EFF8',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 12,
-  },
-  choices: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 18,
-  },
-  choice: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  selectedChoice: {
-    backgroundColor: '#8950CF',
-  },
-  choiceText: {
-    color: '#795891',
-    fontWeight: '600',
-  },
-  selectedText: {
-    color: '#FFFFFF',
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    color: '#302B42',
-    minHeight: 150,
-    borderRadius: 18,
-    padding: 16,
-    fontSize: 15,
-    lineHeight: 23,
-    textAlignVertical: 'top',
-  },
-  note: {
-    fontSize: 12,
-    lineHeight: 19,
-    color: '#94869F',
-    marginVertical: 10,
-  },
-  button: {
-    backgroundColor: '#D63DE6',
-    borderRadius: 22,
-    padding: 16,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  linkButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
-  link: {
-    color: '#8950CF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  body: {
-    color: '#6D6878',
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 28,
-    marginTop: 12,
-  },
-  deleteText: {
-    color: '#B83264',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dimmed: {
-    opacity: 0.6,
-  },
-});
+// Build styles using the shared colours for light and dark appearance.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours'],
+  isDark: boolean
+) =>
+  StyleSheet.create({
+    // Screen background and spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    title: {
+      fontSize: 29,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 10,
+      marginBottom: 24,
+    },
+
+    // Form and saved journal cards.
+    card: {
+      backgroundColor: colours.pink,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 20,
+    },
+    cardTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 12,
+    },
+
+    // Mood selection buttons.
+    choices: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginBottom: 18,
+    },
+    choice: {
+      backgroundColor: colours.surface,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+    },
+    selectedChoice: {
+      backgroundColor: colours.primary,
+    },
+    choiceText: {
+      color: colours.text,
+      fontWeight: '600',
+    },
+        selectedText: {
+      color: colours.buttonText,
+    },
+
+    // Journal draft input.
+    input: {
+      backgroundColor: colours.input,
+      color: colours.text,
+      minHeight: 150,
+      borderRadius: 18,
+      padding: 16,
+      fontSize: 15,
+      lineHeight: 23,
+      textAlignVertical: 'top',
+    },
+    note: {
+      fontSize: 12,
+      lineHeight: 19,
+      color: colours.muted,
+      marginVertical: 10,
+    },
+
+    // Save button.
+    button: {
+      backgroundColor: colours.primary,
+      borderRadius: 22,
+      padding: 16,
+      alignItems: 'center',
+    },
+    buttonText: {
+      color: colours.buttonText,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+
+    // Back, retry and edit links.
+    linkButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      alignSelf: 'flex-start',
+    },
+    link: {
+      color: colours.primary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    body: {
+      color: colours.text,
+      fontSize: 15,
+      lineHeight: 24,
+    },
+
+    // Actions below each saved entry.
+    actions: {
+      flexDirection: 'row',
+      gap: 28,
+      marginTop: 12,
+    },
+    deleteText: {
+      color: isDark ? '#FF9DB8' : '#B83264',
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    dimmed: {
+      opacity: 0.6,
+    },
+  });

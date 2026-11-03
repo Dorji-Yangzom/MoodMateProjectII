@@ -11,6 +11,7 @@ import { recommendActivities } from '../services/recommendations';
 import type { Activity } from '../services/recommendations';
 import { useEffect, useState } from 'react';
 import { getRecentActivityIds } from '../services/recentActivities';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   preferences: MoodPreferences;
@@ -23,6 +24,10 @@ export default function RecommendationsScreen({
   onBack,
   onStartActivity,
 }: Props) {
+
+    // Match the activity cards to the selected theme.
+  const { isDark, colours } = useTheme();
+  const styles = createStyles(colours);
 
   const [recentIds, setRecentIds] = useState<string[]>([]); // Store recent activity IDs.
   const [loadingRecent, setLoadingRecent] = useState(true); // Track history loading.
@@ -66,7 +71,7 @@ export default function RecommendationsScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable
@@ -155,156 +160,171 @@ export default function RecommendationsScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFCFF',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 520,
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 48,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    marginBottom: 22,
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8950CF',
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.3,
-    color: '#9A7AAD',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 29,
-    fontWeight: '800',
-    color: '#302B42',
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#81778D',
-    marginTop: 10,
-  },
-  summary: {
-    backgroundColor: '#F0E8FC',
-    padding: 18,
-    borderRadius: 20,
-    gap: 6,
-    marginTop: 22,
-    marginBottom: 24,
-  },
-  summaryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#795891',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EDE2F4',
-    borderRadius: 25,
-    padding: 22,
-    marginBottom: 18,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 16,
-  },
-  pickLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    color: '#B16A9E',
-  },
-  duration: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#8950CF',
-    backgroundColor: '#F2EBFC',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-  },
-  activityTitle: {
-    fontSize: 21,
-    fontWeight: '700',
-    color: '#493655',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 23,
-    color: '#81778D',
-  },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-  },
-  tag: {
-    fontSize: 11,
-    color: '#956D91',
-    backgroundColor: '#FCECF4',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  reasonBox: {
-    backgroundColor: '#F8F4FC',
-    padding: 14,
-    borderRadius: 16,
-    marginTop: 18,
-  },
-  reasonTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#795891',
-    marginBottom: 6,
-  },
-  reasonText: {
-    fontSize: 12,
-    lineHeight: 20,
-    color: '#85718F',
-  },
-  footer: {
-    fontSize: 12,
-    color: '#94869F',
-    textAlign: 'center',
-    marginTop: 8,
-  },
+// Apply shared theme colours without changing recommendation behaviour.
+const createStyles = (
+  colours: ReturnType<typeof useTheme>['colours']
+) =>
+  StyleSheet.create({
+    // Screen background and spacing.
+    container: {
+      flex: 1,
+      backgroundColor: colours.background,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+      paddingTop: 60,
+      paddingBottom: 48,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginBottom: 22,
+    },
+    backText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colours.primary,
+    },
 
-    // Style the button used to open an activity.
-  startButton: {
-    backgroundColor: '#D63DE6',
-    borderRadius: 20,
-    minHeight: 50,
-    padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-  },
-  startButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  pressed: {
-    opacity: 0.75,
-  },
-});
+    // Screen heading.
+    eyebrow: {
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.3,
+      color: colours.muted,
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 29,
+      fontWeight: '800',
+      color: colours.text,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 23,
+      color: colours.muted,
+      marginTop: 10,
+    },
+
+    // Summary of the user's selected preferences.
+    summary: {
+      backgroundColor: colours.lavender,
+      padding: 18,
+      borderRadius: 20,
+      gap: 6,
+      marginTop: 22,
+      marginBottom: 24,
+    },
+    summaryText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colours.text,
+    },
+
+    // Individual recommendation cards.
+    card: {
+      backgroundColor: colours.surface,
+      borderWidth: 1,
+      borderColor: colours.border,
+      borderRadius: 25,
+      padding: 22,
+      marginBottom: 18,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 16,
+    },
+    pickLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.5,
+      color: colours.primary,
+    },
+    duration: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colours.primary,
+      backgroundColor: colours.lavender,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 12,
+    },
+    activityTitle: {
+      fontSize: 21,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 10,
+    },
+    description: {
+      fontSize: 14,
+      lineHeight: 23,
+      color: colours.muted,
+    },
+
+    // Location and energy tags.
+    tags: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 16,
+    },
+    tag: {
+      fontSize: 11,
+      color: colours.text,
+      backgroundColor: colours.pink,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 10,
+    },
+
+    // Explanation of why the activity was recommended.
+    reasonBox: {
+      backgroundColor: colours.input,
+      padding: 14,
+      borderRadius: 16,
+      marginTop: 18,
+    },
+    reasonTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colours.text,
+      marginBottom: 6,
+    },
+    reasonText: {
+      fontSize: 12,
+      lineHeight: 20,
+      color: colours.muted,
+    },
+    footer: {
+      fontSize: 12,
+      color: colours.muted,
+      textAlign: 'center',
+      marginTop: 8,
+    },
+
+    // Open the selected activity's timer.
+    startButton: {
+      backgroundColor: colours.primary,
+      borderRadius: 20,
+      minHeight: 50,
+      padding: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 18,
+    },
+    startButtonText: {
+      color: colours.buttonText,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    pressed: {
+      opacity: 0.75,
+    },
+  });
